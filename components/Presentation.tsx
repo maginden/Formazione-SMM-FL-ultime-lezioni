@@ -45,6 +45,14 @@ import JSZip from 'jszip';
 import { GoogleGenAI } from "@google/genai";
 
 // --- Types ---
+interface KPI {
+  label: string;
+  icon: string;
+  value: string;
+  color: string;
+  progress: number;
+}
+
 interface LessonData {
   title: string;
   subtitle: string;
@@ -60,6 +68,7 @@ interface LessonData {
   videoUrl?: string;
   infographicUrl?: string;
   quizUrl?: string;
+  kpis: KPI[];
 }
 
 const steps = [
@@ -107,7 +116,13 @@ const INITIAL_DATA: LessonData = {
   logoUrl: "https://drive.google.com/uc?export=view&id=1PxU_d3N_FDouXPCRTy9HPOGPE0l4kOdI",
   videoUrl: "https://drive.google.com/file/d/1w-KVBVi-hb7qrX-M7cN9zk8HtfLNx3L_/view?usp=sharing",
   infographicUrl: "https://drive.google.com/file/d/1PUlnCGfJxfndwHYrQBtoJf26xUkCIeuA/view?usp=sharing",
-  quizUrl: "https://notebooklm.google.com/notebook/b586f8c6-f924-4b4b-a552-81abdcc41d3d?artifactId=50f0331f-9ca3-4894-b052-187506fae9e4"
+  quizUrl: "https://notebooklm.google.com/notebook/b586f8c6-f924-4b4b-a552-81abdcc41d3d?artifactId=50f0331f-9ca3-4894-b052-187506fae9e4",
+  kpis: [
+    { label: "Awareness", icon: "Eye", value: "Reach / Impression", color: "text-purple-400", progress: 85 },
+    { label: "Consideration", icon: "MessageSquare", value: "Engagement / Click", color: "text-blue-400", progress: 70 },
+    { label: "Conversion", icon: "ShoppingBag", value: "Sales / Signups", color: "text-emerald-400", progress: 55 },
+    { label: "Loyalty", icon: "Star", value: "Retention / LTV", color: "text-amber-400", progress: 40 }
+  ]
 };
 
 // --- Components ---
@@ -699,6 +714,26 @@ export default function Presentation() {
     const newObjectives = [...data.objectives];
     newObjectives[index] = value;
     updateField('objectives', newObjectives);
+  };
+
+  const updateKPI = (index: number, field: keyof KPI, value: string | number) => {
+    const newKpis = [...data.kpis];
+    newKpis[index] = { ...newKpis[index], [field]: value };
+    setData(prev => ({ ...prev, kpis: newKpis }));
+  };
+
+  const iconMap: Record<string, any> = {
+    Eye,
+    MessageSquare,
+    ShoppingBag,
+    Star,
+    Target,
+    Activity,
+    TrendingUp,
+    Users,
+    Zap,
+    Smile,
+    BarChart3
   };
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
@@ -1679,32 +1714,57 @@ export default function Presentation() {
                   <h4 className="text-2xl font-display font-medium text-blue-400 relative z-10">Infografica KPI Principali</h4>
                   
                   <div className="space-y-6 relative z-10">
-                    {[
-                      { label: "Awareness", icon: Eye, value: "Reach / Impression", color: "text-purple-400" },
-                      { label: "Consideration", icon: MessageSquare, value: "Engagement / Click", color: "text-blue-400" },
-                      { label: "Conversion", icon: ShoppingBag, value: "Sales / Signups", color: "text-emerald-400" },
-                      { label: "Loyalty", icon: Star, value: "Retention / LTV", color: "text-amber-400" }
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-6 group">
-                        <div className={cn("w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center transition-transform group-hover:scale-110", item.color)}>
-                          <item.icon size={24} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-end mb-1">
-                            <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{item.label}</span>
-                            <span className={cn("text-sm font-bold", item.color)}>{item.value}</span>
+                    {data.kpis.map((item, i) => {
+                      const IconComponent = iconMap[item.icon] || BarChart3;
+                      return (
+                        <div key={i} className="flex items-center gap-6 group">
+                          <div className={cn("w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center transition-transform group-hover:scale-110", item.color)}>
+                            <IconComponent size={24} />
                           </div>
-                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${85 - i * 15}%` }}
-                              transition={{ duration: 1, delay: i * 0.2 }}
-                              className={cn("h-full bg-current", item.color)} 
-                            />
+                          <div className="flex-1">
+                            <div className="flex justify-between items-end mb-1">
+                              {isEditing ? (
+                                <div className="flex flex-col gap-1 w-full">
+                                  <input 
+                                    value={item.label} 
+                                    onChange={(e) => updateKPI(i, 'label', e.target.value)}
+                                    className="bg-white/10 border border-white/20 rounded px-1 text-[10px] text-white"
+                                  />
+                                  <input 
+                                    value={item.value} 
+                                    onChange={(e) => updateKPI(i, 'value', e.target.value)}
+                                    className="bg-white/10 border border-white/20 rounded px-1 text-[10px] text-blue-400"
+                                  />
+                                  <input 
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={item.progress} 
+                                    onChange={(e) => updateKPI(i, 'progress', parseInt(e.target.value))}
+                                    className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                                  />
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{item.label}</span>
+                                  <span className={cn("text-sm font-bold", item.color)}>{item.value}</span>
+                                </>
+                              )}
+                            </div>
+                            {!isEditing && (
+                              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${item.progress}%` }}
+                                  transition={{ duration: 1, delay: i * 0.2 }}
+                                  className={cn("h-full bg-current", item.color)} 
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="pt-6 border-t border-white/10 flex items-center gap-4">
